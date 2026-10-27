@@ -1,0 +1,300 @@
+### Coleção de requisições da API de Chamados do IFRN
+### Use com a extensão REST Client (VS Code) ou o cliente HTTP do IntelliJ.
+### Os IDs consideram os dados iniciais da migration V2:
+###   setores: 1 = COTIC, 2 = MANUT
+###   categorias: 1 Rede e Wi-Fi, 2 Computadores e Software, 3 Projetores (COTIC); 4 Elétrica, 5 Climatização (MANUT)
+###   usuários: 1 Ana (SOLICITANTE), 2 Bruno (SOLICITANTE), 3 Carla (TECNICO COTIC), 4 Diego (TECNICO MANUT)
+
+@baseUrl = http://localhost:8080
+
+##################################################################
+# SETORES
+##################################################################
+
+### Criar setor
+POST {{baseUrl}}/setores
+Content-Type: application/json
+
+{
+  "nome": "Coordenação de Biblioteca",
+  "sigla": "BIB"
+}
+
+### Listar setores (paginado, filtro por nome)
+GET {{baseUrl}}/setores?nome=coord&page=0&size=10&sort=nome,asc
+
+### Buscar setor por id
+GET {{baseUrl}}/setores/1
+
+### Listar categorias de um setor
+GET {{baseUrl}}/setores/1/categorias?page=0&size=10
+
+### Atualizar setor
+PUT {{baseUrl}}/setores/3
+Content-Type: application/json
+
+{
+  "nome": "Biblioteca Central",
+  "sigla": "BIB"
+}
+
+### Excluir setor sem chamados (204)
+DELETE {{baseUrl}}/setores/3
+
+### Excluir setor com chamados vinculados (409 - regra 8; execute após abrir um chamado)
+DELETE {{baseUrl}}/setores/1
+
+##################################################################
+# CATEGORIAS
+##################################################################
+
+### Criar categoria
+POST {{baseUrl}}/categorias
+Content-Type: application/json
+
+{
+  "nome": "Impressoras",
+  "descricao": "Impressoras e scanners",
+  "setorId": 1
+}
+
+### Listar categorias (filtros nome e setorId)
+GET {{baseUrl}}/categorias?nome=re&setorId=1&page=0&size=10
+
+### Buscar categoria por id
+GET {{baseUrl}}/categorias/1
+
+### Atualizar categoria
+PUT {{baseUrl}}/categorias/6
+Content-Type: application/json
+
+{
+  "nome": "Impressoras e Scanners",
+  "descricao": "Equipamentos de impressão e digitalização",
+  "setorId": 1
+}
+
+### Excluir categoria sem chamados (204)
+DELETE {{baseUrl}}/categorias/6
+
+### Excluir categoria com chamados vinculados (409 - regra 8; execute após abrir um chamado)
+DELETE {{baseUrl}}/categorias/1
+
+##################################################################
+# USUÁRIOS
+##################################################################
+
+### Criar usuário solicitante
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Eduarda Rocha",
+  "email": "eduarda.rocha@escolar.ifrn.edu.br",
+  "matricula": "20262002",
+  "tipo": "SOLICITANTE"
+}
+
+### Criar usuário técnico (setorId obrigatório)
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Fábio Melo",
+  "email": "fabio.melo@ifrn.edu.br",
+  "matricula": "1600321",
+  "tipo": "TECNICO",
+  "setorId": 1
+}
+
+### Email duplicado (409)
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Outra Ana",
+  "email": "ana.souza@escolar.ifrn.edu.br",
+  "matricula": "123",
+  "tipo": "SOLICITANTE"
+}
+
+### Email mal formatado (400)
+POST {{baseUrl}}/usuarios
+Content-Type: application/json
+
+{
+  "nome": "Teste",
+  "email": "email-invalido",
+  "matricula": "123",
+  "tipo": "SOLICITANTE"
+}
+
+### Listar usuários (filtros nome, tipo e setorId)
+GET {{baseUrl}}/usuarios?tipo=TECNICO&setorId=1&page=0&size=10
+
+### Buscar usuário por id
+GET {{baseUrl}}/usuarios/1
+
+### Atualizar usuário
+PUT {{baseUrl}}/usuarios/2
+Content-Type: application/json
+
+{
+  "nome": "Bruno Lima Filho",
+  "email": "bruno.lima@ifrn.edu.br",
+  "matricula": "1900123",
+  "tipo": "SOLICITANTE"
+}
+
+### Chamados de um solicitante (filtro status)
+GET {{baseUrl}}/usuarios/1/chamados?status=ABERTO&page=0&size=10
+
+### Chamados atribuídos a um técnico
+GET {{baseUrl}}/usuarios/3/chamados
+
+##################################################################
+# CHAMADOS - fluxo completo
+##################################################################
+
+### 1. Abrir chamado (201; prioridade padrão MEDIA)
+POST {{baseUrl}}/chamados
+Content-Type: application/json
+
+{
+  "titulo": "Wi-Fi do laboratório caiu",
+  "descricao": "Nenhum computador do Lab 3 consegue se conectar à rede sem fio.",
+  "local": "Laboratório 3 - Bloco B",
+  "categoriaId": 1,
+  "solicitanteId": 1
+}
+
+### 2. Abrir chamado com prioridade ALTA
+POST {{baseUrl}}/chamados
+Content-Type: application/json
+
+{
+  "titulo": "Ar-condicionado sem funcionar",
+  "descricao": "O ar-condicionado da sala 5 liga mas não gela.",
+  "local": "Sala 5 - Bloco A",
+  "prioridade": "ALTA",
+  "categoriaId": 5,
+  "solicitanteId": 2
+}
+
+### Técnico tentando abrir chamado (409 - regra 2)
+POST {{baseUrl}}/chamados
+Content-Type: application/json
+
+{
+  "titulo": "Teste",
+  "descricao": "Teste",
+  "local": "Teste",
+  "categoriaId": 1,
+  "solicitanteId": 3
+}
+
+### Listar chamados (paginado e com filtros combináveis)
+GET {{baseUrl}}/chamados?status=ABERTO&setorId=1&prioridade=MEDIA&page=0&size=10&sort=dataAbertura,desc
+
+### Listar chamados por período de abertura, categoria, solicitante e técnico
+GET {{baseUrl}}/chamados?dataInicio=2026-01-01&dataFim=2026-12-31&categoriaId=1&solicitanteId=1
+
+### Detalhar chamado com interações
+GET {{baseUrl}}/chamados/1
+
+### Técnico de outro setor tentando assumir (409 - regra 3)
+PATCH {{baseUrl}}/chamados/1/assumir
+Content-Type: application/json
+
+{
+  "tecnicoId": 4
+}
+
+### 3. Técnico do setor assume o chamado (200)
+PATCH {{baseUrl}}/chamados/1/assumir
+Content-Type: application/json
+
+{
+  "tecnicoId": 3
+}
+
+### 4. Solicitante registra interação (201)
+POST {{baseUrl}}/chamados/1/interacoes
+Content-Type: application/json
+
+{
+  "autorId": 1,
+  "texto": "O problema continua desde ontem à tarde."
+}
+
+### 5. Técnico registra interação (201)
+POST {{baseUrl}}/chamados/1/interacoes
+Content-Type: application/json
+
+{
+  "autorId": 3,
+  "texto": "Identificado access point queimado, fazendo a troca."
+}
+
+### Usuário sem vínculo tentando interagir (409 - regra 7)
+POST {{baseUrl}}/chamados/1/interacoes
+Content-Type: application/json
+
+{
+  "autorId": 2,
+  "texto": "Também estou sem rede."
+}
+
+### Resolver sem solução (400 - regra 4)
+PATCH {{baseUrl}}/chamados/1/resolver
+Content-Type: application/json
+
+{
+  "tecnicoId": 3,
+  "solucao": ""
+}
+
+### 6. Técnico atribuído resolve o chamado (200)
+PATCH {{baseUrl}}/chamados/1/resolver
+Content-Type: application/json
+
+{
+  "tecnicoId": 3,
+  "solucao": "Access point substituído e rede restabelecida."
+}
+
+### Interação em chamado resolvido (409 - regra 6)
+POST {{baseUrl}}/chamados/1/interacoes
+Content-Type: application/json
+
+{
+  "autorId": 1,
+  "texto": "Obrigado!"
+}
+
+### Outro solicitante tentando cancelar (409 - regra 5)
+PATCH {{baseUrl}}/chamados/2/cancelar
+Content-Type: application/json
+
+{
+  "solicitanteId": 1
+}
+
+### 7. Solicitante cancela o próprio chamado ABERTO (200)
+PATCH {{baseUrl}}/chamados/2/cancelar
+Content-Type: application/json
+
+{
+  "solicitanteId": 2
+}
+
+### Assumir chamado cancelado (409 - transição inválida)
+PATCH {{baseUrl}}/chamados/2/assumir
+Content-Type: application/json
+
+{
+  "tecnicoId": 4
+}
+
+### Chamado inexistente (404)
+GET {{baseUrl}}/chamados/999
