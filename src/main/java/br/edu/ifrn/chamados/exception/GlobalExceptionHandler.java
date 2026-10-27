@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,6 +61,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(PropertyReferenceException.class)
     public ResponseEntity<ErroResponse> handleOrdenacaoInvalida(PropertyReferenceException ex, HttpServletRequest request) {
         return erro(HttpStatus.BAD_REQUEST, "Campo de ordenação inválido: " + ex.getPropertyName(), request);
+    }
+
+    // Ocorre, por exemplo, quando o parâmetro sort referencia um atributo inexistente em uma @Query
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    public ResponseEntity<ErroResponse> handleConsultaInvalida(InvalidDataAccessApiUsageException ex, HttpServletRequest request) {
+        return erro(HttpStatus.BAD_REQUEST, "Parâmetros de consulta inválidos (verifique o campo de ordenação)", request);
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
