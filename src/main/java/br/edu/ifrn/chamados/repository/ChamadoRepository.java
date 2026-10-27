@@ -39,4 +39,6 @@ public interface ChamadoRepository extends JpaRepository<Chamado, Long> {
     boolean existsByCategoriaId(Long categoriaId);
 
     boolean existsByCategoriaSetorId(Long setorId);
+
+    boolean existsBySolicitanteIdOrTecnicoId(Long solicitanteId, Long tecnicoId);
 }
